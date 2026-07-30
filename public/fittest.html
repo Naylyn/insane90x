@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Fit Test — Insane90X</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="login-gate" class="login-gate">
+  <div class="login-card">
+    <div class="brand" style="justify-content:center; margin-bottom:18px; display:flex; align-items:center; gap:10px;">
+      <span class="burst"></span> Insane90X
+    </div>
+    <p class="sub" style="text-align:center; margin-bottom:18px; color:var(--ink-soft);">Sign in</p>
+    <form id="login-form">
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" required autocomplete="current-password">
+      </div>
+      <div id="login-error" class="login-error" style="display:none;"></div>
+      <button type="submit" class="btn btn-primary" id="login-submit" style="width:100%; justify-content:center;">Log In</button>
+    </form>
+    <p class="login-note">This device will stay signed in until the session expires.</p>
+  </div>
+</div>
+
+<div id="app-shell" style="display:none;">
+
+<div class="topbar">
+  <div class="brand"><span class="burst"></span> Insane90X</div>
+  <nav>
+    <a href="index.html" class="btn btn-topbar btn-sm">Calendar</a>
+    <a href="fittest.html" class="btn btn-topbar btn-sm">Fit Test</a>
+    <span id="current-user-email" style="font-size:11px; opacity:0.7;"></span>
+    <button class="btn btn-topbar btn-sm" id="btn-logout">Log Out</button>
+  </nav>
+</div>
+
+<main>
+  <div class="page-head">
+    <div>
+      <h1>Fit Test Progress</h1>
+      <p class="sub">Perform each exercise for 1 minute (Insanity) or to failure (P90X). Log reps below. Type a value and hit Enter to save, or just click away.</p>
+    </div>
+  </div>
+
+  <section class="panel">
+    <div class="panel-head"><h2>🔥 Insanity Fit Test</h2></div>
+    <div class="panel-body weight-scroll">
+      <table class="fit-table" id="table-insanity_fit_test"></table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>💪 P90X Fit Test</h2></div>
+    <div class="panel-body weight-scroll">
+      <table class="fit-table" id="table-p90x_fit_test"></table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>📏 Measurements</h2></div>
+    <div class="panel-body weight-scroll">
+      <table class="fit-table" id="table-measurements"></table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>📸 Progress Photos</h2></div>
+    <div class="panel-body weight-scroll">
+      <table class="fit-table" id="table-pictures"></table>
+    </div>
+  </section>
+</main>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="fittest.js"></script>
+</body>
+</html>

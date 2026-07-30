@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Weight Log — Insane90X</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="login-gate" class="login-gate">
+  <div class="login-card">
+    <div class="brand" style="justify-content:center; margin-bottom:18px; display:flex; align-items:center; gap:10px;">
+      <span class="burst"></span> Insane90X
+    </div>
+    <p class="sub" style="text-align:center; margin-bottom:18px; color:var(--ink-soft);">Sign in</p>
+    <form id="login-form">
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" required autocomplete="current-password">
+      </div>
+      <div id="login-error" class="login-error" style="display:none;"></div>
+      <button type="submit" class="btn btn-primary" id="login-submit" style="width:100%; justify-content:center;">Log In</button>
+    </form>
+    <p class="login-note">This device will stay signed in until the session expires.</p>
+  </div>
+</div>
+
+<div id="app-shell" style="display:none;">
+
+<div class="topbar">
+  <div class="brand"><span class="burst"></span> Insane90X</div>
+  <nav>
+    <a href="index.html" class="btn btn-topbar btn-sm">Calendar</a>
+    <a href="fittest.html" class="btn btn-topbar btn-sm">Fit Test</a>
+    <span id="current-user-email" style="font-size:11px; opacity:0.7;"></span>
+    <button class="btn btn-topbar btn-sm" id="btn-logout">Log Out</button>
+  </nav>
+</div>
+
+<main>
+  <div class="page-head">
+    <div>
+      <h1 id="tab-title">Weight Log</h1>
+      <p class="sub">Type a value and hit Enter to save immediately, or just click away.</p>
+    </div>
+  </div>
+
+  <div class="tab-nav">
+    <a href="weights.html?tab=legs_back" class="btn btn-outline btn-sm">Legs &amp; Back</a>
+    <a href="weights.html?tab=shoulders_arms" class="btn btn-outline btn-sm">Shoulders &amp; Arms</a>
+    <a href="weights.html?tab=chest_back" class="btn btn-outline btn-sm">Chest &amp; Back</a>
+    <a href="weights.html?tab=chest_shoulders_tri" class="btn btn-outline btn-sm">Chest, Shoulders &amp; Tri</a>
+    <a href="weights.html?tab=back_biceps" class="btn btn-outline btn-sm">Back &amp; Biceps</a>
+  </div>
+
+  <div class="weight-scroll" id="weight-scroll">
+    <table class="weight-table" id="weight-table"></table>
+  </div>
+</main>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="weights.js"></script>
+</body>
+</html>
