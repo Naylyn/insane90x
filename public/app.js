@@ -37,8 +37,10 @@ async function loadSchedule() {
 
 // Splits a day's workout_text into lines, and classifies each line as
 // either a clickable link (to the matching Fit Test or weight/rep log)
-// or plain editable text. This is what avoids showing a workout name
-// twice - once as text, once as a separate link below it.
+// or plain display text. This is what avoids showing a workout name
+// twice - once as text, once as a separate link below it. Workout text
+// itself is read-only in the app; edit it in the database if it needs
+// to change. Only the Day 1..Day 7 column headers are editable here.
 function classifyLines(day) {
   const lines = (day.workout_text || '').split('\n');
   return lines.map((line, idx) => {
@@ -100,22 +102,17 @@ function render() {
       const cell = document.createElement('div');
       cell.className = 'cal-cell' + (hasLink ? ' linked' : '') + (day.completed ? ' done' : '');
 
-      lines.forEach((lineInfo, idx) => {
+      lines.forEach((lineInfo) => {
         if (lineInfo.type === 'link') {
           const a = document.createElement('a');
           a.className = 'cal-inline-link';
           a.href = lineInfo.href;
           a.textContent = lineInfo.text.trim();
           cell.appendChild(a);
-        } else {
+        } else if (lineInfo.text.trim() !== '') {
           const div = document.createElement('div');
           div.className = 'cal-text';
-          div.contentEditable = 'true';
           div.textContent = lineInfo.text;
-          div.addEventListener('blur', () => saveLine(day, lines, idx, div.textContent, cell));
-          div.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); div.blur(); }
-          });
           cell.appendChild(div);
         }
       });
@@ -143,23 +140,6 @@ function render() {
 
     table.appendChild(tr);
   });
-}
-
-async function saveLine(day, lines, changedIdx, newValue, cellEl) {
-  lines[changedIdx].text = newValue;
-  const newFullText = lines.map(l => l.text).join('\n');
-  if (newFullText === day.workout_text) return;
-  await saveWorkoutText(day, newFullText);
-  // Whether the checkbox should show can change if a day goes from
-  // blank to having text (or back), so re-render just this cell's row.
-  render();
-}
-
-async function saveWorkoutText(day, newText) {
-  const { error } = await sb.from('i90_schedule').update({ workout_text: newText, updated_at: new Date().toISOString() }).eq('id', day.id);
-  if (error) { showToast('Could not save'); return; }
-  day.workout_text = newText;
-  showToast('Saved');
 }
 
 async function saveCompleted(day, completed, cellEl) {

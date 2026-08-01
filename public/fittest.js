@@ -21,6 +21,7 @@ let allRows = [];
 let entriesByRow = {}; // row_id -> { slot -> entry }
 
 async function load() {
+  globalTabIndex = 1;
   const { data: rowData, error: rowErr } = await sb.from('i90_fit_test_rows').select('*').order('section').order('row_order');
   if (rowErr) { showToast('Could not load fit test'); return; }
   allRows = rowData;
@@ -49,6 +50,8 @@ async function load() {
   }
 }
 
+let globalTabIndex = 1; // shared across all four sections - tabindex is page-global, not per-table
+
 function renderSection(section, isImageSection) {
   const table = document.getElementById(`table-${section}`);
   if (!table) return;
@@ -61,6 +64,12 @@ function renderSection(section, isImageSection) {
   ).join('');
   table.appendChild(thead);
 
+  // Column-major: every exercise in Test 1's column first, then every
+  // exercise in Test 2's column, and so on - so Tab goes DOWN through
+  // one test at a time rather than sideways across a single exercise's
+  // whole history.
+  const focusableBySlot = SLOTS.map(() => []);
+
   rows.forEach(row => {
     const tr = document.createElement('tr');
     if (isImageSection) tr.classList.add('image-row');
@@ -69,14 +78,17 @@ function renderSection(section, isImageSection) {
     nameTd.innerHTML = `<div class="ex-name">${escapeHtml(row.exercise_name)}</div>${row.target_muscle ? `<div class="ex-muscle">${escapeHtml(row.target_muscle)}</div>` : ''}${row.instructions ? `<div class="ex-muscle">${escapeHtml(row.instructions)}</div>` : ''}`;
     tr.appendChild(nameTd);
 
-    SLOTS.forEach(slot => {
+    SLOTS.forEach((slot, slotIdx) => {
       const td = document.createElement('td');
       if (slot === 'graduation') td.classList.add('grad-cell');
       if (slot === focusTest) td.classList.add('focused');
       const existing = entriesByRow[row.id][slot];
 
       if (isImageSection) {
-        td.appendChild(buildPhotoCell(row.id, slot, existing));
+        const cell = buildPhotoCell(row.id, slot, existing);
+        td.appendChild(cell);
+        const btn = cell.querySelector('button');
+        if (btn) focusableBySlot[slotIdx].push(btn);
       } else {
         const input = document.createElement('input');
         input.type = 'text';
@@ -86,11 +98,16 @@ function renderSection(section, isImageSection) {
         });
         input.addEventListener('blur', () => saveEntry(row.id, slot, input.value, null));
         td.appendChild(input);
+        focusableBySlot[slotIdx].push(input);
       }
       tr.appendChild(td);
     });
 
     table.appendChild(tr);
+  });
+
+  focusableBySlot.forEach(items => {
+    items.forEach(el => { el.tabIndex = globalTabIndex++; });
   });
 }
 

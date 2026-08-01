@@ -74,11 +74,12 @@ function render() {
   ).join('');
   table.appendChild(thead);
 
-  // Collected column-major, so Tab can be ordered to go DOWN through
-  // exercises within the same week+label first, rather than sideways
-  // across weeks - matches how someone actually fills this in after a
-  // workout (all of today's numbers), not week by week over time.
-  const inputsByColumn = weeks.map(() => [null, null]); // [weekIdx][slotIdx] -> array of inputs
+  // Collected as [weekIdx][rowIdx] -> ordered list of that row's inputs,
+  // so Tab goes RIGHT across an exercise's own sub-columns first (e.g.
+  // RW then LW, which belong to the same exercise), THEN down to the
+  // next exercise - matches how you actually fill this in: finish one
+  // exercise's numbers before moving to the next.
+  const inputsByWeekThenRow = weeks.map(() => []); // [weekIdx][rowIdx] -> [inputs in slot order]
 
   rows.forEach((row, rowIdx) => {
     const tr = document.createElement('tr');
@@ -120,20 +121,20 @@ function render() {
         td.appendChild(wrap);
         tr.appendChild(td);
 
-        if (!inputsByColumn[weekIdx][slotIdx]) inputsByColumn[weekIdx][slotIdx] = [];
-        inputsByColumn[weekIdx][slotIdx].push(input);
+        if (!inputsByWeekThenRow[weekIdx][rowIdx]) inputsByWeekThenRow[weekIdx][rowIdx] = [];
+        inputsByWeekThenRow[weekIdx][rowIdx].push(input);
       });
     });
 
     table.appendChild(tr);
   });
 
-  // Assign tabindex column-major: every exercise in week[0]'s first
-  // label column, then every exercise in week[0]'s second label column
-  // (if any row uses one), then on to week[1], and so on.
+  // Assign tabindex: within week[0], go across row[0]'s sub-columns
+  // left to right, then down to row[1], and so on through every
+  // exercise, before moving on to week[1].
   let ti = 1;
-  inputsByColumn.forEach(slots => {
-    slots.forEach(inputs => {
+  inputsByWeekThenRow.forEach(rowsInWeek => {
+    rowsInWeek.forEach(inputs => {
       if (!inputs) return;
       inputs.forEach(input => { input.tabIndex = ti++; });
     });
