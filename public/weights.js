@@ -74,20 +74,26 @@ function render() {
   ).join('');
   table.appendChild(thead);
 
-  rows.forEach(row => {
+  // Collected column-major, so Tab can be ordered to go DOWN through
+  // exercises within the same week+label first, rather than sideways
+  // across weeks - matches how someone actually fills this in after a
+  // workout (all of today's numbers), not week by week over time.
+  const inputsByColumn = weeks.map(() => [null, null]); // [weekIdx][slotIdx] -> array of inputs
+
+  rows.forEach((row, rowIdx) => {
     const tr = document.createElement('tr');
     const nameTd = document.createElement('td');
     nameTd.className = 'ex-col';
     nameTd.textContent = row.exercise_name;
     tr.appendChild(nameTd);
 
-    weeks.forEach(w => {
+    weeks.forEach((w, weekIdx) => {
       const labels = (row.labels && row.labels.length) ? row.labels : [''];
       // Always reserve 2 sub-columns per week for alignment; second is
       // blank/unused when a row only has one label.
       const slotLabels = [labels[0] || '', labels[1] !== undefined ? labels[1] : null];
 
-      slotLabels.forEach((label, idx) => {
+      slotLabels.forEach((label, slotIdx) => {
         const td = document.createElement('td');
         td.className = 'week-block' + (w === focusWeek ? ' focused' : '');
         td.dataset.week = w;
@@ -113,10 +119,24 @@ function render() {
         wrap.appendChild(input);
         td.appendChild(wrap);
         tr.appendChild(td);
+
+        if (!inputsByColumn[weekIdx][slotIdx]) inputsByColumn[weekIdx][slotIdx] = [];
+        inputsByColumn[weekIdx][slotIdx].push(input);
       });
     });
 
     table.appendChild(tr);
+  });
+
+  // Assign tabindex column-major: every exercise in week[0]'s first
+  // label column, then every exercise in week[0]'s second label column
+  // (if any row uses one), then on to week[1], and so on.
+  let ti = 1;
+  inputsByColumn.forEach(slots => {
+    slots.forEach(inputs => {
+      if (!inputs) return;
+      inputs.forEach(input => { input.tabIndex = ti++; });
+    });
   });
 
   // Scroll the focused week into view

@@ -14,6 +14,9 @@ const PHOTO_BUCKET = (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.photoBuck
 const SLOTS = ['test1','test2','test3','test4','test5','test6','test7','graduation'];
 const SLOT_LABELS = { test1:'Test 1', test2:'Test 2', test3:'Test 3', test4:'Test 4', test5:'Test 5', test6:'Test 6', test7:'Test 7', graduation:'Graduation' };
 
+const params = new URLSearchParams(window.location.search);
+const focusTest = params.get('test'); // e.g. "test3" or "graduation"
+
 let allRows = [];
 let entriesByRow = {}; // row_id -> { slot -> entry }
 
@@ -37,6 +40,13 @@ async function load() {
   renderSection('p90x_fit_test', false);
   renderSection('measurements', false);
   renderSection('pictures', true);
+
+  if (focusTest) {
+    requestAnimationFrame(() => {
+      const target = document.querySelector(`th[data-slot="${focusTest}"]`);
+      if (target) target.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    });
+  }
 }
 
 function renderSection(section, isImageSection) {
@@ -46,7 +56,9 @@ function renderSection(section, isImageSection) {
   const rows = allRows.filter(r => r.section === section);
 
   const thead = document.createElement('tr');
-  thead.innerHTML = '<th>Exercise</th>' + SLOTS.map(s => `<th${s === 'graduation' ? ' class="graduation-col-head"' : ''}>${SLOT_LABELS[s]}</th>`).join('');
+  thead.innerHTML = '<th>Exercise</th>' + SLOTS.map(s =>
+    `<th data-slot="${s}" class="${s === 'graduation' ? 'graduation-col-head' : ''}${s === focusTest ? ' focused' : ''}">${SLOT_LABELS[s]}</th>`
+  ).join('');
   table.appendChild(thead);
 
   rows.forEach(row => {
@@ -60,6 +72,7 @@ function renderSection(section, isImageSection) {
     SLOTS.forEach(slot => {
       const td = document.createElement('td');
       if (slot === 'graduation') td.classList.add('grad-cell');
+      if (slot === focusTest) td.classList.add('focused');
       const existing = entriesByRow[row.id][slot];
 
       if (isImageSection) {

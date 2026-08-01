@@ -19,12 +19,41 @@ const TAB_LABELS = {
 };
 
 let allDays = [];
+let dayLabels = { 1:'Day 1', 2:'Day 2', 3:'Day 3', 4:'Day 4', 5:'Day 5', 6:'Day 6', 7:'Day 7' };
+
+async function loadDayLabels() {
+  const { data, error } = await sb.from('i90_day_labels').select('*');
+  if (error || !data) return;
+  data.forEach(row => { dayLabels[row.day_number] = row.label; });
+}
 
 async function loadSchedule() {
+  await loadDayLabels();
   const { data, error } = await sb.from('i90_schedule').select('*').order('row_order').order('day_number');
   if (error) { showToast('Could not load calendar'); return; }
   allDays = data;
   render();
+}
+
+// Splits a day's workout_text into lines, and classifies each line as
+// either a clickable link (to the matching Fit Test or weight/rep log)
+// or plain editable text. This is what avoids showing a workout name
+// twice - once as text, once as a separate link below it.
+function classifyLines(day) {
+  const lines = (day.workout_text || '').split('\n');
+  return lines.map((line, idx) => {
+    const trimmed = line.trim();
+    const fitMatch = trimmed.match(/^Fit Test\s*(\d+)$/i);
+    if (fitMatch) {
+      const n = parseInt(fitMatch[1], 10);
+      const slot = n >= 8 ? 'graduation' : `test${n}`;
+      return { type: 'link', text: line, href: `fittest.html?test=${slot}` };
+    }
+    if (idx === 0 && day.workout_tab) {
+      return { type: 'link', text: line, href: `weights.html?tab=${day.workout_tab}&week=${day.program_week_number}` };
+    }
+    return { type: 'text', text: line };
+  });
 }
 
 function render() {
@@ -32,7 +61,19 @@ function render() {
   table.innerHTML = '';
 
   const thead = document.createElement('tr');
-  thead.innerHTML = '<th></th>' + [1,2,3,4,5,6,7].map(d => `<th>Day ${d}</th>`).join('');
+  const cornerTh = document.createElement('th');
+  thead.appendChild(cornerTh);
+  for (let d = 1; d <= 7; d++) {
+    const th = document.createElement('th');
+    th.contentEditable = 'true';
+    th.textContent = dayLabels[d];
+    th.dataset.day = d;
+    th.addEventListener('blur', () => saveDayLabel(d, th.textContent));
+    th.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); th.blur(); }
+    });
+    thead.appendChild(th);
+  }
   table.appendChild(thead);
 
   // group by row_order (each row_order = one week row)
@@ -52,49 +93,50 @@ function render() {
 
     daysInRow.forEach(day => {
       const td = document.createElement('td');
-      const cell = document.createElement('div');
-      cell.className = 'cal-cell' + (day.workout_tab ? ' linked' : '') + (day.completed ? ' done' : '');
+      const lines = classifyLines(day);
+      const hasLink = lines.some(l => l.type === 'link');
+      const hasContent = (day.workout_text || '').trim() !== '';
 
-      const textDiv = document.createElement('div');
-      textDiv.className = 'cal-text';
-      textDiv.contentEditable = 'true';
-      textDiv.textContent = day.workout_text || '';
-      textDiv.addEventListener('blur', () => saveWorkoutText(day, textDiv.textContent));
-      // Enter alone commits and blurs; Shift+Enter allows a new line
-      textDiv.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-          e.preventDefault();
-          textDiv.blur();
+      const cell = document.createElement('div');
+      cell.className = 'cal-cell' + (hasLink ? ' linked' : '') + (day.completed ? ' done' : '');
+
+      lines.forEach((lineInfo, idx) => {
+        if (lineInfo.type === 'link') {
+          const a = document.createElement('a');
+          a.className = 'cal-inline-link';
+          a.href = lineInfo.href;
+          a.textContent = lineInfo.text.trim();
+          cell.appendChild(a);
+        } else {
+          const div = document.createElement('div');
+          div.className = 'cal-text';
+          div.contentEditable = 'true';
+          div.textContent = lineInfo.text;
+          div.addEventListener('blur', () => saveLine(day, lines, idx, div.textContent, cell));
+          div.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); div.blur(); }
+          });
+          cell.appendChild(div);
         }
       });
-      cell.appendChild(textDiv);
 
-      const controls = document.createElement('div');
-      controls.className = 'cal-controls';
-
-      const doneLabel = document.createElement('label');
-      doneLabel.style.display = 'flex';
-      doneLabel.style.alignItems = 'center';
-      doneLabel.style.gap = '4px';
-      doneLabel.style.fontSize = '10px';
-      doneLabel.style.color = 'var(--ink-soft)';
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.checked = !!day.completed;
-      checkbox.addEventListener('change', () => saveCompleted(day, checkbox.checked, cell));
-      doneLabel.appendChild(checkbox);
-      doneLabel.appendChild(document.createTextNode('Done'));
-      controls.appendChild(doneLabel);
-
-      if (day.workout_tab) {
-        const link = document.createElement('a');
-        link.className = 'cal-link-tag';
-        link.href = `weights.html?tab=${day.workout_tab}&week=${day.program_week_number}`;
-        link.textContent = `🏋 ${TAB_LABELS[day.workout_tab]} →`;
-        controls.appendChild(link);
+      // Only show the Done checkbox when there is actually a workout
+      // logged that day - an empty rest day has nothing to check off.
+      if (hasContent) {
+        const controls = document.createElement('div');
+        controls.className = 'cal-controls';
+        const doneLabel = document.createElement('label');
+        doneLabel.className = 'cal-done-label';
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.checked = !!day.completed;
+        checkbox.addEventListener('change', () => saveCompleted(day, checkbox.checked, cell));
+        doneLabel.appendChild(checkbox);
+        doneLabel.appendChild(document.createTextNode('Done'));
+        controls.appendChild(doneLabel);
+        cell.appendChild(controls);
       }
 
-      cell.appendChild(controls);
       td.appendChild(cell);
       tr.appendChild(td);
     });
@@ -103,8 +145,17 @@ function render() {
   });
 }
 
+async function saveLine(day, lines, changedIdx, newValue, cellEl) {
+  lines[changedIdx].text = newValue;
+  const newFullText = lines.map(l => l.text).join('\n');
+  if (newFullText === day.workout_text) return;
+  await saveWorkoutText(day, newFullText);
+  // Whether the checkbox should show can change if a day goes from
+  // blank to having text (or back), so re-render just this cell's row.
+  render();
+}
+
 async function saveWorkoutText(day, newText) {
-  if (newText === day.workout_text) return;
   const { error } = await sb.from('i90_schedule').update({ workout_text: newText, updated_at: new Date().toISOString() }).eq('id', day.id);
   if (error) { showToast('Could not save'); return; }
   day.workout_text = newText;
@@ -116,6 +167,15 @@ async function saveCompleted(day, completed, cellEl) {
   if (error) { showToast('Could not save'); return; }
   day.completed = completed;
   cellEl.classList.toggle('done', completed);
+}
+
+async function saveDayLabel(dayNumber, newLabel) {
+  const trimmed = newLabel.trim() || `Day ${dayNumber}`;
+  if (trimmed === dayLabels[dayNumber]) return;
+  const { error } = await sb.from('i90_day_labels').update({ label: trimmed, updated_at: new Date().toISOString() }).eq('day_number', dayNumber);
+  if (error) { showToast('Could not save'); return; }
+  dayLabels[dayNumber] = trimmed;
+  showToast('Saved');
 }
 
 initAuth(() => {

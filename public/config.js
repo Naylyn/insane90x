@@ -1,7 +1,7 @@
 // config.js
-// Filled in automatically by the GitHub Actions deploy workflow from
-// repository secrets/variables. For local testing, copy this file and
-// fill in your own project's values (see the setup guide).
+// Filled in automatically at deploy time from your hosting provider's
+// environment variables/secrets - see the setup guide. For local
+// testing, copy this file and fill in your own project's values.
 window.SUPABASE_CONFIG = {
   url: "__SUPABASE_URL__",
   anonKey: "__SUPABASE_ANON_KEY__",
