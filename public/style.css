@@ -235,6 +235,22 @@ input::placeholder, textarea::placeholder { color: #5a6472; }
 .photo-cell input[type=file] { display: none; }
 .photo-cell .photo-btn { font-size: 10px; padding: 4px 7px; }
 
+/* ================= CALENDAR SCROLL AREA =================
+   Bounded to the viewport height on purpose: without this, a tall
+   calendar's horizontal scrollbar sits at the very bottom of the
+   whole table, off-screen, so reaching it means scrolling the page
+   down first - then back up again to see the row you were editing.
+   Capping the height means vertical AND horizontal scrolling both
+   happen inside this one box, whose scrollbar is always on screen. */
+.cal-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 260px);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.cal-table th { position: sticky; top: 0; z-index: 2; background: var(--surface); }
+
 /* ================= WEIGHT LOGS ================= */
 .weight-scroll { overflow-x: auto; }
 .weight-table { border-collapse: collapse; min-width: 100%; }
