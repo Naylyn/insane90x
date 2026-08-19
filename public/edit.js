@@ -218,10 +218,14 @@ function buildDayEditor(day) {
       markDirty();
     });
 
+    const subRow = document.createElement('div');
+    subRow.className = 'cal-line-linktype-row';
+    subRow.appendChild(typeSelect);
+    subRow.appendChild(detailInput);
+    subRow.appendChild(removeBtn);
+
     row.appendChild(textInput);
-    row.appendChild(typeSelect);
-    row.appendChild(detailInput);
-    row.appendChild(removeBtn);
+    row.appendChild(subRow);
     return row;
   }
 

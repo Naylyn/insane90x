@@ -161,25 +161,31 @@ input::placeholder, textarea::placeholder { color: #5a6472; }
 .toast { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); background: var(--surface-2); border: 1px solid var(--fire); color: var(--ink); padding: 10px 18px; border-radius: var(--radius); font-size: 13px; box-shadow: var(--shadow); z-index: 100; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
 .toast.show { opacity: 1; }
 
-/* ================= CALENDAR ================= */
-.cal-table { width: 100%; border-collapse: separate; border-spacing: 6px; }
-.cal-table th { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); font-weight: 700; padding: 4px 8px; text-align: left; outline: none; border-radius: 4px; }
+/* ================= CALENDAR =================
+   table-layout: fixed with width: 100% means the table can never be
+   wider than its container - no horizontal scrollbar, ever. Columns
+   share whatever width is available instead of forcing themselves
+   wider to fit content. Vertical scrolling is just the ordinary
+   browser page scroll; there is no separate scroll box anymore. */
+.cal-table { width: 100%; table-layout: fixed; border-collapse: separate; border-spacing: 4px; }
+.cal-table th { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); font-weight: 700; padding: 4px 6px; text-align: left; outline: none; border-radius: 4px; overflow: hidden; text-overflow: ellipsis; }
 .cal-table th[contenteditable]:hover, .cal-table th[contenteditable]:focus { background: var(--surface-2); color: var(--ink); }
-.cal-week-label { font-size: 11px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; padding: 6px 10px; text-transform: uppercase; }
+.cal-table th:first-child { width: 64px; }
+.cal-week-label { font-size: 10.5px; font-weight: 700; color: var(--ink-soft); padding: 6px 4px; text-transform: uppercase; overflow-wrap: break-word; }
 .cal-cell {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 8px 9px;
-  min-width: 130px;
+  padding: 6px 6px;
   vertical-align: top;
   position: relative;
+  overflow-wrap: break-word;
 }
 .cal-cell.linked { border-color: var(--fire); }
 .cal-cell.done { opacity: 0.55; }
 .cal-cell .cal-text {
-  font-size: 12px;
-  line-height: 1.4;
+  font-size: 11.5px;
+  line-height: 1.35;
   white-space: pre-wrap;
   outline: none;
   min-height: 18px;
@@ -187,29 +193,33 @@ input::placeholder, textarea::placeholder { color: #5a6472; }
 .cal-cell.done .cal-text { text-decoration: line-through; }
 .cal-cell .cal-inline-link {
   display: block;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 700;
   color: var(--fire);
   text-decoration: none;
-  line-height: 1.4;
+  line-height: 1.35;
   cursor: pointer;
 }
 .cal-cell .cal-inline-link:hover { text-decoration: underline; }
 .cal-cell.done .cal-inline-link { text-decoration: line-through; }
-.cal-cell .cal-controls { display: flex; align-items: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
-.cal-cell .cal-done-label { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--ink-soft); cursor: pointer; }
+.cal-cell .cal-controls { display: flex; align-items: center; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.cal-cell .cal-done-label { display: flex; align-items: center; gap: 4px; font-size: 9.5px; color: var(--ink-soft); cursor: pointer; }
 .cal-cell .cal-done-badge { margin-top: 6px; font-size: 10px; font-weight: 700; color: var(--lime); }
-.cal-cell input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--fire); cursor: pointer; }
+.cal-cell input[type=checkbox] { width: 14px; height: 14px; accent-color: var(--fire); cursor: pointer; flex-shrink: 0; }
 
-/* ── Edit mode ── */
-.cal-edit-cell { min-width: 220px; }
+/* ── Edit mode: each line stacks text on its own row, with the link
+   controls on a second row below it - keeps every column usable even
+   when 7 of them have to share one screen width. ── */
+.cal-edit-lines { display: flex; flex-direction: column; gap: 8px; margin-bottom: 6px; }
+.cal-line-row { display: flex; flex-direction: column; gap: 3px; border-bottom: 1px dashed var(--line); padding-bottom: 6px; }
+.cal-line-row:last-child { border-bottom: none; padding-bottom: 0; }
+.cal-line-text { width: 100%; font-size: 11px; padding: 4px 5px; box-sizing: border-box; }
+.cal-line-linktype-row { display: flex; gap: 3px; align-items: center; }
+.cal-line-linktype { flex: 1; min-width: 0; font-size: 9px; padding: 3px 2px; }
+.cal-line-detail { width: 32px; flex-shrink: 0; font-size: 10px; padding: 3px 2px; box-sizing: border-box; }
+.cal-line-row .icon-btn { flex-shrink: 0; padding: 2px; font-size: 12px; }
 .cal-edit-cell.cal-dirty { border-color: #f5c542; box-shadow: 0 0 0 1px #f5c542 inset; }
-.cal-edit-lines { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
-.cal-line-row { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
-.cal-line-text { flex: 1 1 90px; min-width: 70px; font-size: 11.5px; padding: 5px 6px; }
-.cal-line-linktype { flex: 1 1 100px; min-width: 90px; font-size: 10.5px; padding: 4px 4px; }
-.cal-line-detail { width: 54px; flex-shrink: 0; font-size: 11px; padding: 5px 4px; }
-.cal-add-line { width: 100%; justify-content: center; margin-bottom: 6px; }
+.cal-add-line { width: 100%; justify-content: center; margin-bottom: 6px; font-size: 10px; padding: 4px; }
 .cal-save-btn:disabled { opacity: 0.35; }
 
 .cal-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; font-size: 11px; color: var(--ink-soft); }
@@ -234,22 +244,6 @@ input::placeholder, textarea::placeholder { color: #5a6472; }
 .photo-cell .photo-placeholder { width: 90px; height: 120px; border-radius: 4px; border: 1px dashed var(--line); display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--ink-soft); background: var(--bg-deep); }
 .photo-cell input[type=file] { display: none; }
 .photo-cell .photo-btn { font-size: 10px; padding: 4px 7px; }
-
-/* ================= CALENDAR SCROLL AREA =================
-   Bounded to the viewport height on purpose: without this, a tall
-   calendar's horizontal scrollbar sits at the very bottom of the
-   whole table, off-screen, so reaching it means scrolling the page
-   down first - then back up again to see the row you were editing.
-   Capping the height means vertical AND horizontal scrolling both
-   happen inside this one box, whose scrollbar is always on screen. */
-.cal-scroll {
-  overflow-x: auto;
-  overflow-y: auto;
-  max-height: calc(100vh - 260px);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-}
-.cal-table th { position: sticky; top: 0; z-index: 2; background: var(--surface); }
 
 /* ================= WEIGHT LOGS ================= */
 .weight-scroll { overflow-x: auto; }
