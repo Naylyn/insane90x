@@ -6,9 +6,10 @@
 // Which program is current:
 //   1. ?program=<id> in the URL, if it exists
 //   2. the one picked earlier in THIS browser tab (sessionStorage)
-//   3. otherwise the newest active (non-archived) program - so opening
+//   3. otherwise your chosen default program (the star), if it is active
+//   4. otherwise the newest active (non-archived) program - so opening
 //      the site fresh always lands on your latest program first
-//   4. otherwise the newest program of any kind (everything archived)
+//   5. otherwise the newest program of any kind (everything archived)
 //
 // Every page then filters its data by window.currentProgram.id.
 
@@ -36,6 +37,8 @@ function pickCurrentProgram(programs) {
   const stored = progStoreGet();
   if (stored && byId(stored)) return byId(stored);
   const active = programs.filter(p => !p.archived_at);
+  const dflt = active.find(p => p.is_default);
+  if (dflt) return dflt;
   if (active.length) return active[0];   // list is newest-first
   return programs[0] || null;
 }
@@ -86,9 +89,12 @@ function renderProgramBar() {
     <span class="program-label">Program</span>
     ${select}
     ${cur && cur.archived_at ? '<span class="program-badge">Archived</span>' : ''}
+    ${cur && cur.is_default ? '<span class="program-badge program-badge-default">★ Default</span>' : ''}
     ${cur ? `<span class="program-style">${cur.log_style === 'custom' ? 'Custom weight/rep logs' : 'Insane90X-style logs'}</span>` : ''}
     <span class="program-spacer"></span>
     <button type="button" class="btn btn-outline btn-sm" id="program-new">+ New Program</button>
+    ${cur && !cur.archived_at && !cur.is_default ? '<button type="button" class="btn btn-outline btn-sm" id="program-default">★ Set as Default</button>' : ''}
+    ${cur ? '<button type="button" class="btn btn-outline btn-sm" id="program-copy">Copy…</button><button type="button" class="btn btn-outline btn-sm" id="program-rename">Rename</button>' : ''}
     ${cur && !cur.archived_at ? '<button type="button" class="btn btn-outline btn-sm" id="program-finish">Finish / Archive…</button>' : ''}
     ${cur && cur.archived_at ? '<button type="button" class="btn btn-outline btn-sm" id="program-restore">Restore</button><button type="button" class="btn btn-danger btn-sm" id="program-delete">Delete…</button>' : ''}
   `;
@@ -102,6 +108,20 @@ function renderProgramBar() {
     window.location.href = url.pathname.split('/').pop() + (url.search || '');
   });
   document.getElementById('program-new').addEventListener('click', openNewProgramModal);
+  // Clicking Calendar always goes to your default program, even after
+  // browsing another one in this tab.
+  document.querySelectorAll('a[href="index.html"]').forEach(a => {
+    a.addEventListener('click', () => { try { sessionStorage.removeItem(PROGRAM_SESSION_KEY); } catch (e) { /* ignore */ } });
+  });
+  const df = document.getElementById('program-default');
+  if (df) df.addEventListener('click', async () => {
+    try { await setDefaultProgram(window.currentProgram.id); } catch (e) { progToast('Could not set default (run migration 6?)'); return; }
+    window.location.reload();
+  });
+  const cp = document.getElementById('program-copy');
+  if (cp) cp.addEventListener('click', openCopyModal);
+  const rn = document.getElementById('program-rename');
+  if (rn) rn.addEventListener('click', openRenameModal);
   const fin = document.getElementById('program-finish');
   if (fin) fin.addEventListener('click', () => openFinishModal(false));
   const del = document.getElementById('program-delete');
@@ -339,8 +359,9 @@ function openFinishModal(deleteOnly) {
           const np = await createProgram({ name, style: cur.log_style, calMode: 'copy', weeks: 13, sourceId: cur.id });
           nextId = np.id;
         }
-        const { error } = await sb.from('i90_programs').update({ archived_at: new Date().toISOString() }).eq('id', cur.id);
+        const { error } = await sb.from('i90_programs').update({ archived_at: new Date().toISOString(), is_default: false }).eq('id', cur.id);
         if (error) throw error;
+        if (nextId && cur.is_default) await setDefaultProgram(nextId);
       } else {
         const { error } = await sb.from('i90_programs').delete().eq('id', cur.id);
         if (error) throw error;
@@ -379,3 +400,95 @@ function equalizeCalendarCells() {
 }
 let _eqTimer = null;
 window.addEventListener('resize', () => { clearTimeout(_eqTimer); _eqTimer = setTimeout(equalizeCalendarCells, 120); });
+
+// ------------------------------------------------------------------
+// Copy the current program's calendar into a new program
+// ------------------------------------------------------------------
+function openCopyModal() {
+  const cur = window.currentProgram;
+  if (!cur) return;
+  const m = openProgramModal(`
+    <h2>Copy “${progEsc(cur.name)}”</h2>
+    <form id="cp-form">
+      <div class="field">
+        <label for="cp-name">Name for the copy</label>
+        <input type="text" id="cp-name" required value="${progEsc(cur.name)} (copy)">
+      </div>
+      <p class="sub" style="font-size:12.5px; color:var(--ink-soft); margin-bottom:12px;">
+        Copies the calendar: workout text, links, week labels and day names. Nothing is marked done and no logged weights or reps come along.
+        ${cur.log_style === 'custom' ? 'Your exercise list is copied too (names only).' : ''}
+      </p>
+      <div class="field">
+        <label>Log style for the copy</label>
+        <label class="choice"><input type="radio" name="cp-style" value="custom"${cur.log_style === 'custom' ? ' checked' : ''}><span>Custom weights &amp; reps</span></label>
+        <label class="choice"><input type="radio" name="cp-style" value="original"${cur.log_style === 'original' ? ' checked' : ''}><span>Insane90X-style</span></label>
+      </div>
+      <div id="cp-status" style="font-size:12px; margin-bottom:6px;"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="cp-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="cp-submit">Create Copy</button>
+      </div>
+    </form>
+  `);
+  m.querySelector('#cp-cancel').addEventListener('click', closeProgramModal);
+  m.querySelector('#cp-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = m.querySelector('#cp-name').value.trim();
+    if (!name) return;
+    const style = m.querySelector('input[name=cp-style]:checked').value;
+    const btn = m.querySelector('#cp-submit');
+    const status = m.querySelector('#cp-status');
+    btn.disabled = true; status.textContent = 'Copying...';
+    try {
+      const prog = await createProgram({ name, style, calMode: 'copy', weeks: 13, sourceId: cur.id });
+      progStoreSet(prog.id);
+      window.location.href = 'index.html';
+    } catch (err) {
+      status.textContent = 'Could not copy: ' + (err.message || err);
+      status.style.color = '#ff6b5c';
+      btn.disabled = false;
+    }
+  });
+  setTimeout(() => { const i = m.querySelector('#cp-name'); i.focus(); i.select(); }, 0);
+}
+
+// ------------------------------------------------------------------
+// Rename
+// ------------------------------------------------------------------
+function openRenameModal() {
+  const cur = window.currentProgram;
+  if (!cur) return;
+  const m = openProgramModal(`
+    <h2>Rename program</h2>
+    <form id="rn-form">
+      <div class="field">
+        <label for="rn-name">Program name</label>
+        <input type="text" id="rn-name" required value="${progEsc(cur.name)}">
+      </div>
+      <div id="rn-status" style="font-size:12px; margin-bottom:6px;"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-outline" id="rn-cancel">Cancel</button>
+        <button type="submit" class="btn btn-primary" id="rn-submit">Save</button>
+      </div>
+    </form>
+  `);
+  m.querySelector('#rn-cancel').addEventListener('click', closeProgramModal);
+  m.querySelector('#rn-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = m.querySelector('#rn-name').value.trim();
+    if (!name) return;
+    if (name === cur.name) { closeProgramModal(); return; }
+    const { error } = await sb.from('i90_programs').update({ name }).eq('id', cur.id);
+    if (error) { const s = m.querySelector('#rn-status'); s.textContent = 'Could not rename.'; s.style.color = '#ff6b5c'; return; }
+    window.location.reload();
+  });
+  setTimeout(() => { const i = m.querySelector('#rn-name'); i.focus(); i.select(); }, 0);
+}
+
+// Only one program can be the default: clear the old one first.
+async function setDefaultProgram(id) {
+  const { error: e1 } = await sb.from('i90_programs').update({ is_default: false }).eq('is_default', true);
+  if (e1) throw e1;
+  const { error: e2 } = await sb.from('i90_programs').update({ is_default: true }).eq('id', id);
+  if (e2) throw e2;
+}

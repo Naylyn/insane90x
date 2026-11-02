@@ -319,3 +319,4 @@ input::placeholder, textarea::placeholder { color: #5a6472; }
 /* selects in the program/compare bars should size to their content, not stretch full width */
 .program-bar select, .compare-bar select { width: auto; max-width: 100%; }
 .program-bar .program-spacer { flex: 1 1 0; min-width: 0; }
+.program-bar .program-badge-default { background: var(--fire-bg); color: var(--fire); border-color: var(--fire); }
