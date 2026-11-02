@@ -14,14 +14,14 @@ let allDays = [];
 let dayLabels = { 1:'Day 1', 2:'Day 2', 3:'Day 3', 4:'Day 4', 5:'Day 5', 6:'Day 6', 7:'Day 7' };
 
 async function loadDayLabels() {
-  const { data, error } = await sb.from('i90_day_labels').select('*');
+  const { data, error } = await sb.from('i90_day_labels').select('*').eq('program_id', currentProgram.id);
   if (error || !data) return;
   data.forEach(row => { dayLabels[row.day_number] = row.label; });
 }
 
 async function loadSchedule() {
   await loadDayLabels();
-  const { data, error } = await sb.from('i90_schedule').select('*').order('row_order').order('day_number');
+  const { data, error } = await sb.from('i90_schedule').select('*').eq('program_id', currentProgram.id).order('row_order').order('day_number');
   if (error) { showToast('Could not load calendar'); return; }
   allDays = data;
   render();
@@ -101,8 +101,9 @@ function render() {
 
     table.appendChild(tr);
   });
+  equalizeCalendarCells();
 }
 
-initAuth(() => {
-  loadSchedule();
+initAuth(async () => {
+  if (await initPrograms()) loadSchedule();
 });

@@ -29,7 +29,7 @@ async function load() {
   const rowIds = allRows.map(r => r.id);
   let entryData = [];
   if (rowIds.length) {
-    const { data, error } = await sb.from('i90_fit_test_entries').select('*').in('row_id', rowIds);
+    const { data, error } = await sb.from('i90_fit_test_entries').select('*').eq('program_id', currentProgram.id).in('row_id', rowIds);
     if (error) { showToast('Could not load logged values'); return; }
     entryData = data;
   }
@@ -167,6 +167,7 @@ function buildPhotoCell(rowId, slot, existing) {
 
 async function saveEntry(rowId, slot, valueText, imageUrl) {
   const payload = {
+    program_id: currentProgram.id,
     row_id: rowId,
     slot,
     updated_at: new Date().toISOString()
@@ -174,13 +175,13 @@ async function saveEntry(rowId, slot, valueText, imageUrl) {
   if (valueText !== null) payload.value_text = valueText;
   if (imageUrl !== null) payload.image_url = imageUrl;
 
-  const { error } = await sb.from('i90_fit_test_entries').upsert(payload, { onConflict: 'row_id,slot' });
+  const { error } = await sb.from('i90_fit_test_entries').upsert(payload, { onConflict: 'row_id,slot,program_id' });
   if (error) { showToast('Could not save'); return; }
   if (!entriesByRow[rowId][slot]) entriesByRow[rowId][slot] = {};
   if (valueText !== null) entriesByRow[rowId][slot].value_text = valueText;
   if (imageUrl !== null) entriesByRow[rowId][slot].image_url = imageUrl;
 }
 
-initAuth(() => {
-  load();
+initAuth(async () => {
+  if (await initPrograms()) load();
 });

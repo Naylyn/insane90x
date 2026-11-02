@@ -273,3 +273,49 @@ input::placeholder, textarea::placeholder { color: #5a6472; }
 @media (max-width: 700px) {
   .fit-table { font-size: 11px; }
 }
+
+/* ---------- Program bar (all pages) ---------- */
+.program-bar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 18px; }
+.program-bar .program-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--ink-soft); }
+.program-bar select { min-width: 180px; max-width: 100%; font-size: 13px; padding: 6px 8px; }
+.program-bar .program-spacer { flex: 1; }
+.program-bar .program-style { font-size: 11px; color: var(--ink-soft); }
+.program-bar .program-badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; background: var(--blue-bg); color: var(--blue); border: 1px solid var(--blue); border-radius: 4px; padding: 2px 6px; }
+.modal label.choice { display: flex; gap: 8px; align-items: flex-start; text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 400; color: var(--ink); margin-bottom: 8px; cursor: pointer; }
+.modal label.choice input[type=radio], .modal label.choice input[type=checkbox] { margin-top: 3px; flex-shrink: 0; width: auto; accent-color: var(--fire); }
+.modal label.choice small { color: var(--ink-soft); font-size: 11.5px; }
+.modal label.choice select, .modal label.choice input[type=number] { font-size: 12px; padding: 3px 5px; }
+
+/* ---------- Custom workout log ---------- */
+.ex-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 14px; }
+.ex-card-head { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.ex-card-head h2 { font-size: 14px; flex: 1; min-width: 140px; }
+.ex-card-body { padding: 10px 14px 14px; }
+.session-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 6px 0; border-bottom: 1px dashed var(--line); }
+.session-row:last-child { border-bottom: none; }
+.session-row input[type=date] { font-size: 12px; padding: 4px 6px; }
+.session-row .set-pair { display: inline-flex; align-items: center; gap: 3px; background: var(--bg-deep); border: 1px solid var(--line); border-radius: 4px; padding: 2px 4px; }
+.session-row .set-pair input { width: 48px; text-align: center; font-size: 12px; padding: 4px 2px; }
+.session-row .set-pair span { color: var(--ink-soft); font-size: 11px; }
+.session-row .note-input { flex: 1; min-width: 100px; font-size: 12px; padding: 4px 6px; }
+.add-ex-form { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+.add-ex-form input { flex: 1; min-width: 200px; }
+
+/* ---------- Progress page ---------- */
+.prog-table { width: 100%; border-collapse: collapse; }
+.prog-table th { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); font-weight: 700; padding: 8px 10px; text-align: left; border-bottom: 2px solid var(--line); }
+.prog-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); font-size: 13px; vertical-align: top; }
+.prog-table .when { display: block; font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+.prog-table .none { color: var(--ink-soft); }
+.delta-up { color: var(--lime); font-weight: 700; }
+.delta-down { color: #ff6b5c; font-weight: 700; }
+.delta-same { color: var(--ink-soft); }
+.compare-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; font-size: 13px; }
+
+/* keep the per-day Save button inside its cell on narrow phones */
+.cal-cell .cal-save-btn { padding: 4px 6px; font-size: 10px; }
+.cal-cell { min-width: 0; }
+
+/* selects in the program/compare bars should size to their content, not stretch full width */
+.program-bar select, .compare-bar select { width: auto; max-width: 100%; }
+.program-bar .program-spacer { flex: 1 1 0; min-width: 0; }

@@ -38,12 +38,14 @@
   <nav>
     <a href="index.html" class="btn btn-topbar btn-sm">Calendar</a>
     <a href="edit.html" class="btn btn-topbar btn-sm" style="border-color:var(--fire); color:var(--fire);">✏️ Edit</a>
-    <a href="fittest.html" class="btn btn-topbar btn-sm">Fit Test</a>
-    <a href="weights.html?tab=legs_back" class="btn btn-topbar btn-sm">Legs &amp; Back</a>
-    <a href="weights.html?tab=shoulders_arms" class="btn btn-topbar btn-sm">Shoulders &amp; Arms</a>
-    <a href="weights.html?tab=chest_back" class="btn btn-topbar btn-sm">Chest &amp; Back</a>
-    <a href="weights.html?tab=chest_shoulders_tri" class="btn btn-topbar btn-sm">Chest/Shldr/Tri</a>
-    <a href="weights.html?tab=back_biceps" class="btn btn-topbar btn-sm">Back &amp; Biceps</a>
+    <a href="log.html" class="btn btn-topbar btn-sm nav-custom">Workout Log</a>
+    <a href="fittest.html" class="btn btn-topbar btn-sm nav-original">Fit Test</a>
+    <a href="weights.html?tab=legs_back" class="btn btn-topbar btn-sm nav-original">Legs &amp; Back</a>
+    <a href="weights.html?tab=shoulders_arms" class="btn btn-topbar btn-sm nav-original">Shoulders &amp; Arms</a>
+    <a href="weights.html?tab=chest_back" class="btn btn-topbar btn-sm nav-original">Chest &amp; Back</a>
+    <a href="weights.html?tab=chest_shoulders_tri" class="btn btn-topbar btn-sm nav-original">Chest/Shldr/Tri</a>
+    <a href="weights.html?tab=back_biceps" class="btn btn-topbar btn-sm nav-original">Back &amp; Biceps</a>
+    <a href="progress.html" class="btn btn-topbar btn-sm">📈 Progress</a>
     <span id="current-user-email" style="font-size:11px; opacity:0.7;"></span>
     <button class="btn btn-topbar btn-sm" id="btn-manage-users">+ Users</button>
     <button class="btn btn-topbar btn-sm" id="btn-logout">Log Out</button>
@@ -92,6 +94,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="config.js"></script>
 <script src="auth.js"></script>
+<script src="program.js"></script>
 <script src="edit.js"></script>
 </body>
 </html>

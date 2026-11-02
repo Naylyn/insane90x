@@ -49,6 +49,18 @@ Push to `main` and GitHub Actions builds and deploys `public/` to GitHub
 Pages automatically. See the setup guide for the one-time configuration
 of repository secrets and Supabase.
 
+## Multiple programs (migrations 4 and 5)
+
+Every calendar, day header and logged value now belongs to a **program**. Use the Program bar at the top of any page to switch, start a new program, or finish one.
+
+- **Latest first:** opening the site lands on your newest active program.
+- **Log style per program:** *Insane90X-style* (weight tabs, Fit Test, calendar links) or *Custom weights and reps* (your own exercises; each workout is a date plus sets of weight x reps, on the Workout Log page).
+- **Finish / Archive:** archiving hides a program but keeps every logged value and date. You can optionally start a fresh round with the same calendar (nothing marked done, no logged values). Archived programs can be restored or deleted (typed confirmation).
+- **Progress page:** each exercise in the current program next to the last time the same exercise (matched by name) was worked in an earlier program, with dates and the change in top weight.
+- **Calendar cells** are all the same height - the tallest cell sets the height for every cell.
+
+**Upgrade order matters:** run `insane90x-migration-4-multi-program.sql`, then `insane90x-migration-5-custom-logs.sql`, in the Supabase SQL Editor **before** deploying this version of the site. The previous version of the site stops working once migration 4 has run.
+
 ## Where the data came from
 
 `supabase-backend/sql/seed_data.sql` was generated directly from your

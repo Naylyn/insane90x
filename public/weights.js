@@ -47,7 +47,7 @@ async function load() {
   const rowIds = rows.map(r => r.id);
   let entryData = [];
   if (rowIds.length) {
-    const { data, error } = await sb.from('i90_weight_entries').select('*').in('row_id', rowIds);
+    const { data, error } = await sb.from('i90_weight_entries').select('*').eq('program_id', currentProgram.id).in('row_id', rowIds);
     if (error) { showToast('Could not load logged values'); return; }
     entryData = data;
   }
@@ -151,17 +151,18 @@ function render() {
 
 async function saveEntry(rowId, week, label, value) {
   const { error } = await sb.from('i90_weight_entries').upsert({
+    program_id: currentProgram.id,
     row_id: rowId,
     week_number: week,
     label: label,
     value_text: value,
     updated_at: new Date().toISOString()
-  }, { onConflict: 'row_id,week_number,label' });
+  }, { onConflict: 'row_id,week_number,label,program_id' });
   if (error) { showToast('Could not save'); return; }
   if (!entriesByRow[rowId][week]) entriesByRow[rowId][week] = {};
   entriesByRow[rowId][week][label] = { value_text: value };
 }
 
-initAuth(() => {
-  load();
+initAuth(async () => {
+  if (await initPrograms()) load();
 });

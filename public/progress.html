@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Progress — Insane90X</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div id="login-gate" class="login-gate">
+  <div class="login-card">
+    <div class="brand" style="justify-content:center; margin-bottom:18px; display:flex; align-items:center; gap:10px;">
+      <span class="burst"></span> Insane90X
+    </div>
+    <p class="sub" style="text-align:center; margin-bottom:18px; color:var(--ink-soft);">Sign in</p>
+    <form id="login-form">
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="login-password">Password</label>
+        <input type="password" id="login-password" required autocomplete="current-password">
+      </div>
+      <div id="login-error" class="login-error" style="display:none;"></div>
+      <button type="submit" class="btn btn-primary" id="login-submit" style="width:100%; justify-content:center;">Log In</button>
+    </form>
+    <p class="login-note">This device will stay signed in until the session expires.</p>
+  </div>
+</div>
+
+<div id="app-shell" style="display:none;">
+
+<div class="topbar">
+  <div class="brand"><span class="burst"></span> Insane90X</div>
+  <nav>
+    <a href="index.html" class="btn btn-topbar btn-sm">Calendar</a>
+    <a href="edit.html" class="btn btn-topbar btn-sm">✏️ Edit</a>
+    <a href="log.html" class="btn btn-topbar btn-sm nav-custom">Workout Log</a>
+    <a href="fittest.html" class="btn btn-topbar btn-sm nav-original">Fit Test</a>
+    <a href="weights.html?tab=legs_back" class="btn btn-topbar btn-sm nav-original">Legs &amp; Back</a>
+    <a href="weights.html?tab=shoulders_arms" class="btn btn-topbar btn-sm nav-original">Shoulders &amp; Arms</a>
+    <a href="weights.html?tab=chest_back" class="btn btn-topbar btn-sm nav-original">Chest &amp; Back</a>
+    <a href="weights.html?tab=chest_shoulders_tri" class="btn btn-topbar btn-sm nav-original">Chest/Shldr/Tri</a>
+    <a href="weights.html?tab=back_biceps" class="btn btn-topbar btn-sm nav-original">Back &amp; Biceps</a>
+    <a href="progress.html" class="btn btn-topbar btn-sm" style="border-color:var(--fire); color:var(--fire);">📈 Progress</a>
+    <span id="current-user-email" style="font-size:11px; opacity:0.7;"></span>
+    <button class="btn btn-topbar btn-sm" id="btn-logout">Log Out</button>
+  </nav>
+</div>
+
+<main>
+  <div class="page-head">
+    <div>
+      <h1>Progress</h1>
+      <p class="sub">Your latest weights and reps in this program next to the last time you did the same exercise in an earlier program, with dates.</p>
+    </div>
+  </div>
+
+  <div class="compare-bar">
+    <label for="compare-select">Compare against</label>
+    <select id="compare-select"></select>
+  </div>
+  <div id="progress-note" class="sub" style="color:var(--ink-soft); font-size:12.5px; margin-bottom:12px;"></div>
+  <section class="panel">
+    <div class="panel-body weight-scroll" style="padding:0;">
+      <table class="prog-table" id="prog-table"></table>
+    </div>
+  </section>
+</main>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="auth.js"></script>
+<script src="program.js"></script>
+<script src="progress.js"></script>
+</body>
+</html>

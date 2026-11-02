@@ -18,6 +18,7 @@ const LINK_TYPE_LABELS = {
   chest_shoulders_tri: 'Chest, Shoulders & Tri (week)',
   back_biceps: 'Back & Biceps (week)',
   fittest: 'Fit Test #',
+  log: 'Workout Log page',
   custom: 'Custom URL'
 };
 const WEEK_TAB_KEYS = ['legs_back', 'shoulders_arms', 'chest_back', 'chest_shoulders_tri', 'back_biceps'];
@@ -26,14 +27,14 @@ let allDays = [];
 let dayLabels = { 1: 'Day 1', 2: 'Day 2', 3: 'Day 3', 4: 'Day 4', 5: 'Day 5', 6: 'Day 6', 7: 'Day 7' };
 
 async function loadDayLabels() {
-  const { data, error } = await sb.from('i90_day_labels').select('*');
+  const { data, error } = await sb.from('i90_day_labels').select('*').eq('program_id', currentProgram.id);
   if (error || !data) return;
   data.forEach(row => { dayLabels[row.day_number] = row.label; });
 }
 
 async function loadSchedule() {
   await loadDayLabels();
-  const { data, error } = await sb.from('i90_schedule').select('*').order('row_order').order('day_number');
+  const { data, error } = await sb.from('i90_schedule').select('*').eq('program_id', currentProgram.id).order('row_order').order('day_number');
   if (error) { showToast('Could not load calendar'); return; }
   allDays = data;
   render();
@@ -43,6 +44,7 @@ async function loadSchedule() {
 // its detail field show the right thing when a day is opened for editing.
 function parseLink(url) {
   if (!url) return { type: '', detail: '' };
+  if (url === 'log.html') return { type: 'log', detail: '' };
   let m = url.match(/^weights\.html\?tab=([a-z_]+)&week=(\d+)$/);
   if (m && WEEK_TAB_KEYS.includes(m[1])) return { type: m[1], detail: m[2] };
   m = url.match(/^fittest\.html\?test=(?:test(\d+)|graduation)$/);
@@ -53,6 +55,7 @@ function parseLink(url) {
 // The reverse: turns a link type + its detail value back into a real URL.
 function buildLink(type, detail) {
   if (!type) return null;
+  if (type === 'log') return 'log.html';
   if (type === 'custom') return (detail || '').trim() || null;
   if (type === 'fittest') {
     const n = parseInt(detail, 10);
@@ -115,6 +118,7 @@ function render() {
 
     table.appendChild(tr);
   });
+  equalizeCalendarCells();
 }
 
 // Builds one day's editable cell: a list of text+link line rows, an
@@ -193,7 +197,7 @@ function buildDayEditor(day) {
     detailInput.type = 'text';
     detailInput.className = 'cal-line-detail';
     detailInput.value = parsed.detail || '';
-    detailInput.style.display = parsed.type ? '' : 'none';
+    detailInput.style.display = (parsed.type && parsed.type !== 'log') ? '' : 'none';
     detailInput.placeholder = parsed.type === 'custom' ? 'URL' : parsed.type === 'fittest' ? 'Test # (1-8)' : 'Week #';
 
     function syncLink() {
@@ -201,7 +205,7 @@ function buildDayEditor(day) {
       markDirty();
     }
     typeSelect.addEventListener('change', () => {
-      detailInput.style.display = typeSelect.value ? '' : 'none';
+      detailInput.style.display = (typeSelect.value && typeSelect.value !== 'log') ? '' : 'none';
       detailInput.placeholder = typeSelect.value === 'custom' ? 'URL' : typeSelect.value === 'fittest' ? 'Test # (1-8)' : 'Week #';
       syncLink();
     });
@@ -232,6 +236,7 @@ function buildDayEditor(day) {
   function renderLines() {
     linesWrap.innerHTML = '';
     workingLines.forEach((line, idx) => linesWrap.appendChild(buildLineRow(line, idx)));
+    if (cell.isConnected) equalizeCalendarCells();
   }
   renderLines();
 
@@ -274,7 +279,7 @@ function buildDayEditor(day) {
 async function saveDayLabel(dayNumber, newLabel) {
   const trimmed = newLabel.trim() || `Day ${dayNumber}`;
   if (trimmed === dayLabels[dayNumber]) return;
-  const { error } = await sb.from('i90_day_labels').update({ label: trimmed, updated_at: new Date().toISOString() }).eq('day_number', dayNumber);
+  const { error } = await sb.from('i90_day_labels').upsert({ program_id: currentProgram.id, day_number: dayNumber, label: trimmed, updated_at: new Date().toISOString() }, { onConflict: 'program_id,day_number' });
   if (error) { showToast('Could not save'); return; }
   dayLabels[dayNumber] = trimmed;
   showToast('Saved');
@@ -299,6 +304,7 @@ document.getElementById('btn-add-week').addEventListener('click', async () => {
   const newRows = [];
   for (let day_number = 1; day_number <= 7; day_number++) {
     newRows.push({
+      program_id: currentProgram.id,
       week_label: 'New Week',
       row_order: newRowOrder,
       day_number,
@@ -313,6 +319,6 @@ document.getElementById('btn-add-week').addEventListener('click', async () => {
   showToast('Week added - scroll down to edit it');
 });
 
-initAuth(() => {
-  loadSchedule();
+initAuth(async () => {
+  if (await initPrograms()) loadSchedule();
 });
