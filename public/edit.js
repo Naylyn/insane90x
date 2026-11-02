@@ -24,6 +24,7 @@ const LINK_TYPE_LABELS = {
 const WEEK_TAB_KEYS = ['legs_back', 'shoulders_arms', 'chest_back', 'chest_shoulders_tri', 'back_biceps'];
 
 let allDays = [];
+let editors = []; // one per day cell; each has .isDirty() and .save()
 let dayLabels = { 1: 'Day 1', 2: 'Day 2', 3: 'Day 3', 4: 'Day 4', 5: 'Day 5', 6: 'Day 6', 7: 'Day 7' };
 
 async function loadDayLabels() {
@@ -73,6 +74,8 @@ function buildLink(type, detail) {
 function render() {
   const table = document.getElementById('cal-table');
   table.innerHTML = '';
+  editors = [];
+  updateSaveBar();
 
   const thead = document.createElement('tr');
   thead.appendChild(document.createElement('th'));
@@ -158,17 +161,11 @@ function buildDayEditor(day) {
   doneLabel.appendChild(document.createTextNode('Done'));
   controls.appendChild(doneLabel);
 
-  const saveBtn = document.createElement('button');
-  saveBtn.type = 'button';
-  saveBtn.className = 'btn btn-primary btn-sm cal-save-btn';
-  saveBtn.textContent = 'Save';
-  saveBtn.disabled = true;
-  controls.appendChild(saveBtn);
-
+  let dirty = false;
   function markDirty() {
+    dirty = true;
     cell.classList.add('cal-dirty');
-    saveBtn.disabled = false;
-    saveBtn.textContent = 'Save';
+    updateSaveBar();
   }
 
   function buildLineRow(line, idx) {
@@ -243,9 +240,10 @@ function buildDayEditor(day) {
   cell.appendChild(addLineBtn);
   cell.appendChild(controls);
 
-  saveBtn.addEventListener('click', async () => {
-    saveBtn.disabled = true;
-    saveBtn.textContent = 'Saving...';
+  // Saves this day only if it has unsaved changes. Returns true on
+  // success (or nothing to do), false on error.
+  async function saveCell() {
+    if (!dirty) return true;
     const cleanLines = workingLines
       .map(l => ({ text: (l.text || '').trim(), link: l.link || null }))
       .filter(l => l.text !== '' || l.link);
@@ -255,23 +253,17 @@ function buildDayEditor(day) {
       completed: workingCompleted,
       updated_at: new Date().toISOString()
     }).eq('id', day.id);
-
-    if (error) {
-      showToast('Could not save');
-      saveBtn.disabled = false;
-      saveBtn.textContent = 'Save';
-      return;
-    }
+    if (error) return false;
 
     day.workout_lines = cleanLines;
     day.completed = workingCompleted;
     workingLines = cleanLines.map(l => ({ ...l }));
     renderLines();
+    dirty = false;
     cell.classList.remove('cal-dirty');
-    saveBtn.textContent = 'Saved \u2713';
-    showToast('Saved');
-    setTimeout(() => { saveBtn.textContent = 'Save'; saveBtn.disabled = true; }, 1200);
-  });
+    return true;
+  }
+  editors.push({ isDirty: () => dirty, save: saveCell });
 
   return cell;
 }
@@ -298,7 +290,43 @@ async function saveWeekLabel(daysInRow, newLabel) {
   showToast('Saved');
 }
 
+// ---- Save All ----
+function dirtyCount() { return editors.filter(e => e.isDirty()).length; }
+
+function updateSaveBar() {
+  const bar = document.getElementById('save-bar');
+  if (!bar) return;
+  const n = dirtyCount();
+  bar.classList.toggle('show', n > 0);
+  document.getElementById('save-bar-count').textContent = `${n} unsaved day${n === 1 ? '' : 's'}`;
+}
+
+let savingAll = false;
+async function saveAll() {
+  if (savingAll) return;
+  const pending = editors.filter(e => e.isDirty());
+  if (!pending.length) { showToast('Nothing to save'); return; }
+  savingAll = true;
+  const btn = document.getElementById('btn-save-all');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  const results = await Promise.all(pending.map(e => e.save()));
+  const failed = results.filter(r => !r).length;
+  savingAll = false;
+  btn.disabled = false; btn.textContent = 'Save All';
+  updateSaveBar();
+  showToast(failed ? `Saved ${results.length - failed}, ${failed} failed - try again` : `Saved ${results.length} day${results.length === 1 ? '' : 's'}`);
+}
+document.getElementById('btn-save-all').addEventListener('click', saveAll);
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveAll(); }
+});
+window.addEventListener('beforeunload', (e) => {
+  if (dirtyCount() > 0) { e.preventDefault(); e.returnValue = ''; }
+});
+
 document.getElementById('btn-add-week').addEventListener('click', async () => {
+  // re-rendering would discard unsaved edits, so save them first
+  if (dirtyCount() > 0) await saveAll();
   const maxRowOrder = allDays.reduce((max, d) => Math.max(max, d.row_order), 0);
   const newRowOrder = maxRowOrder + 1;
   const newRows = [];

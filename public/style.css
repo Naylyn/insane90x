@@ -320,3 +320,9 @@ input::placeholder, textarea::placeholder { color: #5a6472; }
 .program-bar select, .compare-bar select { width: auto; max-width: 100%; }
 .program-bar .program-spacer { flex: 1 1 0; min-width: 0; }
 .program-bar .program-badge-default { background: var(--fire-bg); color: var(--fire); border-color: var(--fire); }
+
+/* ---------- Save All bar (edit page) ---------- */
+.save-bar { position: fixed; left: 50%; bottom: 18px; transform: translate(-50%, 140%); display: flex; align-items: center; gap: 14px; background: var(--surface-2); border: 1px solid #f5c542; border-radius: var(--radius); padding: 10px 14px; box-shadow: var(--shadow); z-index: 50; transition: transform 0.2s ease; }
+.save-bar.show { transform: translate(-50%, 0); }
+.save-bar span { font-size: 13px; color: #f5c542; font-weight: 700; }
+.save-bar:not(.show) { visibility: hidden; }

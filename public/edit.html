@@ -56,13 +56,18 @@
   <div class="page-head">
     <div>
       <h1>Edit Calendar</h1>
-      <p class="sub">Edit a day's text or links, then hit that day's Save button - nothing commits until you do, including marking a day done. Day headers and week labels save as soon as you click away.</p>
+      <p class="sub">Make as many changes as you like, then hit Save All (or Ctrl/Cmd+S). Nothing commits until you do, including marking a day done. Changed days are outlined in yellow. Day headers and week labels save as soon as you click away.</p>
     </div>
     <button class="btn btn-primary" id="btn-add-week">+ Add Week</button>
   </div>
 
   <table class="cal-table" id="cal-table"></table>
 </main>
+
+<div class="save-bar" id="save-bar">
+  <span id="save-bar-count">0 unsaved days</span>
+  <button class="btn btn-primary" id="btn-save-all">Save All</button>
+</div>
 
 </div>
 
