@@ -10,18 +10,50 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
-const LINK_TYPE_LABELS = {
-  '': 'No link',
-  legs_back: 'Legs & Back (week)',
-  shoulders_arms: 'Shoulders & Arms (week)',
-  chest_back: 'Chest & Back (week)',
-  chest_shoulders_tri: 'Chest, Shoulders & Tri (week)',
-  back_biceps: 'Back & Biceps (week)',
-  fittest: 'Fit Test #',
-  log: 'Workout Log page',
-  custom: 'Custom URL'
+// Every place a calendar line can link to, shown as readable text.
+// Weeks per tab match the weight log pages.
+const TAB_LABELS = {
+  legs_back: 'Legs & Back',
+  shoulders_arms: 'Shoulders & Arms',
+  chest_back: 'Chest & Back',
+  chest_shoulders_tri: 'Chest, Shoulders & Tri',
+  back_biceps: 'Back & Biceps'
 };
-const WEEK_TAB_KEYS = ['legs_back', 'shoulders_arms', 'chest_back', 'chest_shoulders_tri', 'back_biceps'];
+const TAB_WEEKS = {
+  legs_back: [1,2,3,4,6,7,8,9,10,11,12,13],
+  shoulders_arms: [1,2,3,4,10,12],
+  chest_back: [1,2,3,4,10,12],
+  chest_shoulders_tri: [6,7,8,9,11,13],
+  back_biceps: [6,7,8,9,11,13]
+};
+const CUSTOM_LINK = '__custom__';
+
+function linkOptionGroups() {
+  const groups = [];
+  Object.keys(TAB_LABELS).forEach(tab => {
+    groups.push({
+      label: TAB_LABELS[tab],
+      options: TAB_WEEKS[tab].map(w => ({ value: `weights.html?tab=${tab}&week=${w}`, text: `${TAB_LABELS[tab]} - Week ${w}` }))
+    });
+  });
+  const fit = [1,2,3,4,5,6,7].map(n => ({ value: `fittest.html?test=test${n}`, text: `Fit Test - Test ${n}` }));
+  fit.push({ value: 'fittest.html?test=graduation', text: 'Fit Test - Graduation' });
+  groups.push({ label: 'Fit Test', options: fit });
+  groups.push({ label: 'Other', options: [
+    { value: 'log.html', text: 'Workout Log page' },
+    { value: CUSTOM_LINK, text: 'Custom web address...' }
+  ]});
+  return groups;
+}
+
+// A readable name for any stored link, even one not in the lists above.
+function describeLink(url) {
+  let m = url.match(/^weights\.html\?tab=([a-z_]+)&week=(\d+)$/);
+  if (m && TAB_LABELS[m[1]]) return `${TAB_LABELS[m[1]]} - Week ${m[2]}`;
+  m = url.match(/^fittest\.html\?test=(?:test(\d+)|graduation)$/);
+  if (m) return m[1] ? `Fit Test - Test ${m[1]}` : 'Fit Test - Graduation';
+  return null;
+}
 
 let allDays = [];
 let editors = []; // one per day cell; each has .isDirty() and .save()
@@ -39,36 +71,6 @@ async function loadSchedule() {
   if (error) { showToast('Could not load calendar'); return; }
   allDays = data;
   render();
-}
-
-// Turns a stored link URL back into {type, detail} so the dropdown and
-// its detail field show the right thing when a day is opened for editing.
-function parseLink(url) {
-  if (!url) return { type: '', detail: '' };
-  if (url === 'log.html') return { type: 'log', detail: '' };
-  let m = url.match(/^weights\.html\?tab=([a-z_]+)&week=(\d+)$/);
-  if (m && WEEK_TAB_KEYS.includes(m[1])) return { type: m[1], detail: m[2] };
-  m = url.match(/^fittest\.html\?test=(?:test(\d+)|graduation)$/);
-  if (m) return { type: 'fittest', detail: m[1] || '8' };
-  return { type: 'custom', detail: url };
-}
-
-// The reverse: turns a link type + its detail value back into a real URL.
-function buildLink(type, detail) {
-  if (!type) return null;
-  if (type === 'log') return 'log.html';
-  if (type === 'custom') return (detail || '').trim() || null;
-  if (type === 'fittest') {
-    const n = parseInt(detail, 10);
-    if (!n || n < 1) return null;
-    return `fittest.html?test=${n >= 8 ? 'graduation' : 'test' + n}`;
-  }
-  if (WEEK_TAB_KEYS.includes(type)) {
-    const week = parseInt(detail, 10);
-    if (!week || week < 1) return null;
-    return `weights.html?tab=${type}&week=${week}`;
-  }
-  return null;
 }
 
 function render() {
@@ -179,31 +181,58 @@ function buildDayEditor(day) {
     textInput.placeholder = 'Workout text...';
     textInput.addEventListener('input', () => { workingLines[idx].text = textInput.value; markDirty(); });
 
-    const parsed = parseLink(line.link);
+    // One dropdown, all choices in words. A link that is not in the
+    // standard lists (an older week, or a typed web address) is still
+    // shown by name / address, never as a bare number.
+    const known = linkOptionGroups();
+    const allValues = new Set(known.flatMap(g => g.options.map(o => o.value)));
+    let selectedValue = '';
+    let customUrl = '';
+    let extraOption = null;
+    if (line.link) {
+      if (allValues.has(line.link)) selectedValue = line.link;
+      else if (describeLink(line.link)) { selectedValue = line.link; extraOption = { value: line.link, text: describeLink(line.link) }; }
+      else { selectedValue = CUSTOM_LINK; customUrl = line.link; }
+    }
+
     const typeSelect = document.createElement('select');
     typeSelect.className = 'cal-line-linktype';
-    Object.entries(LINK_TYPE_LABELS).forEach(([val, label]) => {
-      const opt = document.createElement('option');
-      opt.value = val;
-      opt.textContent = label;
-      if (val === parsed.type) opt.selected = true;
-      typeSelect.appendChild(opt);
+    typeSelect.setAttribute('aria-label', 'Link to');
+    const none = document.createElement('option');
+    none.value = ''; none.textContent = 'No link';
+    typeSelect.appendChild(none);
+    if (extraOption) {
+      const o = document.createElement('option');
+      o.value = extraOption.value; o.textContent = extraOption.text;
+      typeSelect.appendChild(o);
+    }
+    known.forEach(g => {
+      const og = document.createElement('optgroup');
+      og.label = g.label;
+      g.options.forEach(opt => {
+        const o = document.createElement('option');
+        o.value = opt.value; o.textContent = opt.text;
+        og.appendChild(o);
+      });
+      typeSelect.appendChild(og);
     });
+    typeSelect.value = selectedValue;
 
     const detailInput = document.createElement('input');
     detailInput.type = 'text';
     detailInput.className = 'cal-line-detail';
-    detailInput.value = parsed.detail || '';
-    detailInput.style.display = (parsed.type && parsed.type !== 'log') ? '' : 'none';
-    detailInput.placeholder = parsed.type === 'custom' ? 'URL' : parsed.type === 'fittest' ? 'Test # (1-8)' : 'Week #';
+    detailInput.placeholder = 'https://...';
+    detailInput.value = customUrl;
+    detailInput.style.display = selectedValue === CUSTOM_LINK ? '' : 'none';
 
     function syncLink() {
-      workingLines[idx].link = buildLink(typeSelect.value, detailInput.value);
+      const v = typeSelect.value;
+      workingLines[idx].link = v === CUSTOM_LINK ? ((detailInput.value || '').trim() || null) : (v || null);
       markDirty();
     }
     typeSelect.addEventListener('change', () => {
-      detailInput.style.display = (typeSelect.value && typeSelect.value !== 'log') ? '' : 'none';
-      detailInput.placeholder = typeSelect.value === 'custom' ? 'URL' : typeSelect.value === 'fittest' ? 'Test # (1-8)' : 'Week #';
+      detailInput.style.display = typeSelect.value === CUSTOM_LINK ? '' : 'none';
+      if (typeSelect.value === CUSTOM_LINK) detailInput.focus();
       syncLink();
     });
     detailInput.addEventListener('input', syncLink);

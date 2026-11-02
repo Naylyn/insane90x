@@ -326,3 +326,7 @@ input::placeholder, textarea::placeholder { color: #5a6472; }
 .save-bar.show { transform: translate(-50%, 0); }
 .save-bar span { font-size: 13px; color: #f5c542; font-weight: 700; }
 .save-bar:not(.show) { visibility: hidden; }
+
+/* custom web address box is now a full-width row under the link dropdown */
+.cal-line-linktype-row { flex-wrap: wrap; }
+.cal-line-detail { width: 100%; flex-basis: 100%; order: 3; }
