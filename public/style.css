@@ -180,6 +180,11 @@ input::placeholder, textarea::placeholder { color: #5a6472; }
   vertical-align: top;
   position: relative;
   overflow-wrap: break-word;
+  /* Fits roughly 3 lines of workout text comfortably - most days have
+     fewer, but every cell reserves this much space regardless, so a
+     3-line day (e.g. "Chest, Shoulders & Triceps" + "Cardio Abs")
+     doesn't make its row taller than every other row in the grid. */
+  min-height: 74px;
 }
 .cal-cell.linked { border-color: var(--fire); }
 .cal-cell.done { opacity: 0.55; }

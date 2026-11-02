@@ -1,0 +1,26 @@
+name: Supabase Keep-Alive
+
+# Pings the Supabase project every 3 days - safely under the 7-day
+# inactivity window that triggers a free-tier pause. This alone is
+# enough; nothing else needs to change.
+on:
+  schedule:
+    - cron: '17 14 */3 * *'   # every 3 days, at a quiet/off-peak time
+  workflow_dispatch:          # lets you trigger it manually too, to test
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping the database
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            "https://pbfodoaviockaybhzkuj.supabase.co/rest/v1/i90_schedule?select=id&limit=1" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBiZm9kb2F2aW9ja2F5Ymh6a3VqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MjU2ODAsImV4cCI6MjEwMTAwMTY4MH0.lXIwFHa91_mPe6DEJHi7C83_dVMvmHd4MH2CeU97ozY" \
+            -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBiZm9kb2F2aW9ja2F5Ymh6a3VqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU0MjU2ODAsImV4cCI6MjEwMTAwMTY4MH0.lXIwFHa91_mPe6DEJHi7C83_dVMvmHd4MH2CeU97ozY")
+          echo "Response status: $STATUS"
+          # 200 (got rows) or 401/403/404 (blocked by row security, or
+          # table name typo) all still count as the database having
+          # received and processed a real query - what actually
+          # resets the inactivity clock. Only a connection failure
+          # (curl error, no status at all) is worth troubleshooting.
