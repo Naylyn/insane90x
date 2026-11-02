@@ -330,3 +330,15 @@ input::placeholder, textarea::placeholder { color: #5a6472; }
 /* custom web address box is now a full-width row under the link dropdown */
 .cal-line-linktype-row { flex-wrap: wrap; }
 .cal-line-detail { width: 100%; flex-basis: 100%; order: 3; }
+
+/* ---------- week / day move controls ---------- */
+.cal-week-controls { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 6px; }
+.cal-week-controls .icon-btn { font-size: 12px; padding: 2px 3px; }
+.cal-week-controls .icon-btn:disabled { opacity: 0.25; cursor: default; }
+.cal-week-controls .icon-btn.armed { color: #ff6b5c; font-size: 10px; font-weight: 700; }
+.cal-rearrange-all { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--ink-soft); }
+.cal-cell .cal-swap { font-size: 10px; padding: 2px 3px; }
+.rearr-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+.rearr-target { width: 74px; font-weight: 700; }
+.rearr-arrow { color: var(--ink-soft); font-size: 12px; }
+.rearr-row select { width: auto; flex: 1; }

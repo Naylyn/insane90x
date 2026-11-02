@@ -80,7 +80,15 @@ function render() {
   updateSaveBar();
 
   const thead = document.createElement('tr');
-  thead.appendChild(document.createElement('th'));
+  const corner = document.createElement('th');
+  const allBtn = document.createElement('button');
+  allBtn.type = 'button';
+  allBtn.className = 'icon-btn cal-rearrange-all';
+  allBtn.textContent = '⇄ Days';
+  allBtn.title = 'Rearrange which workout goes on which day, in every week';
+  allBtn.addEventListener('click', () => openRearrangeModal(null));
+  corner.appendChild(allBtn);
+  thead.appendChild(corner);
   for (let d = 1; d <= 7; d++) {
     const th = document.createElement('th');
     th.contentEditable = 'true';
@@ -99,7 +107,8 @@ function render() {
     weeks[d.row_order].push(d);
   });
 
-  Object.keys(weeks).sort((a, b) => a - b).forEach(rowOrder => {
+  const rowKeys = Object.keys(weeks).sort((a, b) => a - b);
+  rowKeys.forEach((rowOrder, rowIdx) => {
     const daysInRow = weeks[rowOrder].sort((a, b) => a.day_number - b.day_number);
     const tr = document.createElement('tr');
 
@@ -113,6 +122,7 @@ function render() {
       if (e.key === 'Enter') { e.preventDefault(); labelDiv.blur(); }
     });
     labelTd.appendChild(labelDiv);
+    labelTd.appendChild(buildWeekControls(daysInRow, rowIdx, rowKeys.length));
     tr.appendChild(labelTd);
 
     daysInRow.forEach(day => {
@@ -162,6 +172,17 @@ function buildDayEditor(day) {
   doneLabel.appendChild(checkbox);
   doneLabel.appendChild(document.createTextNode('Done'));
   controls.appendChild(doneLabel);
+
+  // Swap this day's workout with the day before / after it, same week.
+  const idx = day.day_number;
+  const mkSwap = (txt, title, otherDay) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'icon-btn cal-swap'; b.textContent = txt; b.title = title;
+    b.addEventListener('click', () => swapDaysInWeek(day, otherDay));
+    return b;
+  };
+  if (idx > 1) controls.appendChild(mkSwap('◀', `Swap with ${dayLabels[idx - 1]}`, idx - 1));
+  if (idx < 7) controls.appendChild(mkSwap('▶', `Swap with ${dayLabels[idx + 1]}`, idx + 1));
 
   let dirty = false;
   function markDirty() {
@@ -379,3 +400,173 @@ document.getElementById('btn-add-week').addEventListener('click', async () => {
 initAuth(async () => {
   if (await initPrograms()) loadSchedule();
 });
+
+// =====================================================================
+// Week (row) and day (column) operations
+// =====================================================================
+// Structural changes re-read the calendar, which would throw away
+// unsaved edits - so pending edits are saved first.
+async function structural(fn, doneMsg) {
+  if (dirtyCount() > 0) await saveAll();
+  if (dirtyCount() > 0) { showToast('Fix the unsaved days first'); return; }
+  try {
+    await fn();
+  } catch (err) {
+    showToast('Could not do that: ' + (err.message || err));
+    return;
+  }
+  await loadSchedule();
+  if (doneMsg) showToast(doneMsg);
+}
+
+function weekRows(rowOrder) { return allDays.filter(d => d.row_order === rowOrder); }
+
+function buildWeekControls(daysInRow, rowIdx, total) {
+  const rowOrder = daysInRow[0].row_order;
+  const wrap = document.createElement('div');
+  wrap.className = 'cal-week-controls';
+  const mk = (txt, title, onClick, disabled) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'icon-btn'; b.textContent = txt; b.title = title;
+    b.disabled = !!disabled;
+    b.addEventListener('click', onClick);
+    wrap.appendChild(b);
+    return b;
+  };
+  mk('▲', 'Move this week up', () => moveWeek(rowOrder, -1), rowIdx === 0);
+  mk('▼', 'Move this week down', () => moveWeek(rowOrder, +1), rowIdx === total - 1);
+  mk('⧉', 'Duplicate this week (inserted right below)', () => duplicateWeek(rowOrder));
+  mk('⇄', 'Rearrange days in this week only', () => openRearrangeModal(rowOrder));
+  const del = mk('🗑', 'Delete this week', () => {}, false);
+  // two-click delete so a stray tap never removes a week
+  let armed = false, timer = null;
+  del.addEventListener('click', () => {
+    if (!armed) {
+      armed = true; del.textContent = 'Sure?'; del.classList.add('armed');
+      timer = setTimeout(() => { armed = false; del.textContent = '🗑'; del.classList.remove('armed'); }, 3000);
+    } else {
+      clearTimeout(timer);
+      deleteWeek(rowOrder);
+    }
+  });
+  return wrap;
+}
+
+async function moveWeek(rowOrder, dir) {
+  const orders = [...new Set(allDays.map(d => d.row_order))].sort((a, b) => a - b);
+  const i = orders.indexOf(rowOrder);
+  const other = orders[i + dir];
+  if (other === undefined) return;
+  await structural(async () => {
+    const a = weekRows(rowOrder).map(d => d.id), b = weekRows(other).map(d => d.id);
+    const now = new Date().toISOString();
+    const r1 = await sb.from('i90_schedule').update({ row_order: other, updated_at: now }).in('id', a);
+    if (r1.error) throw r1.error;
+    const r2 = await sb.from('i90_schedule').update({ row_order: rowOrder, updated_at: now }).in('id', b);
+    if (r2.error) throw r2.error;
+  }, 'Week moved');
+}
+
+async function duplicateWeek(rowOrder) {
+  await structural(async () => {
+    const src = weekRows(rowOrder);
+    // make room: push every later week down by one
+    const later = [...new Set(allDays.filter(d => d.row_order > rowOrder).map(d => d.row_order))].sort((a, b) => b - a);
+    for (const ro of later) {
+      const { error } = await sb.from('i90_schedule').update({ row_order: ro + 1 }).in('id', weekRows(ro).map(d => d.id));
+      if (error) throw error;
+    }
+    const copies = src.map(d => ({
+      program_id: currentProgram.id,
+      week_label: `${d.week_label} (copy)`,
+      row_order: rowOrder + 1,
+      day_number: d.day_number,
+      workout_lines: d.workout_lines || [],
+      completed: false
+    }));
+    const { error } = await sb.from('i90_schedule').insert(copies);
+    if (error) throw error;
+  }, 'Week duplicated just below - rename it if you like');
+}
+
+async function deleteWeek(rowOrder) {
+  await structural(async () => {
+    const { error } = await sb.from('i90_schedule').delete().in('id', weekRows(rowOrder).map(d => d.id));
+    if (error) throw error;
+  }, 'Week deleted');
+}
+
+// Gives day `a` the workout of day `b` and vice versa (text, links, done).
+async function swapContents(rowA, rowB) {
+  const now = new Date().toISOString();
+  const r1 = await sb.from('i90_schedule').update({ workout_lines: rowB.workout_lines || [], completed: !!rowB.completed, updated_at: now }).eq('id', rowA.id);
+  if (r1.error) throw r1.error;
+  const r2 = await sb.from('i90_schedule').update({ workout_lines: rowA.workout_lines || [], completed: !!rowA.completed, updated_at: now }).eq('id', rowB.id);
+  if (r2.error) throw r2.error;
+}
+
+async function swapDaysInWeek(day, otherDayNumber) {
+  const other = allDays.find(d => d.row_order === day.row_order && d.day_number === otherDayNumber);
+  if (!other) return;
+  await structural(() => swapContents(day, other), 'Swapped');
+}
+
+// mapping[target] = source day number: day `target` receives the workout
+// that was on day `source`. Applied to one week, or to every week.
+async function applyDayMapping(mapping, onlyRowOrder) {
+  const orders = onlyRowOrder == null ? [...new Set(allDays.map(d => d.row_order))] : [onlyRowOrder];
+  const now = new Date().toISOString();
+  const jobs = [];
+  orders.forEach(ro => {
+    const rows = weekRows(ro);
+    const byDay = {};
+    rows.forEach(r => { byDay[r.day_number] = r; });
+    for (let target = 1; target <= 7; target++) {
+      const src = mapping[target];
+      if (src === target || !byDay[target] || !byDay[src]) continue;
+      jobs.push(sb.from('i90_schedule').update({
+        workout_lines: byDay[src].workout_lines || [], completed: !!byDay[src].completed, updated_at: now
+      }).eq('id', byDay[target].id));
+    }
+  });
+  const results = await Promise.all(jobs);
+  const bad = results.find(r => r.error);
+  if (bad) throw bad.error;
+}
+
+function openRearrangeModal(onlyRowOrder) {
+  const scopeText = onlyRowOrder == null ? 'every week' : `just “${(weekRows(onlyRowOrder)[0] || {}).week_label}”`;
+  const dayOpts = sel => [1,2,3,4,5,6,7].map(n => `<option value="${n}"${n === sel ? ' selected' : ''}>${escapeHtml(dayLabels[n])}</option>`).join('');
+  const rowsHtml = [1,2,3,4,5,6,7].map(n => `
+    <div class="rearr-row">
+      <span class="rearr-target">${escapeHtml(dayLabels[n])}</span>
+      <span class="rearr-arrow">gets the workout from</span>
+      <select data-target="${n}">${dayOpts(n)}</select>
+    </div>`).join('');
+  const m = openProgramModal(`
+    <h2>Rearrange days</h2>
+    <p class="sub" style="font-size:12.5px; color:var(--ink-soft); margin-bottom:12px;">
+      Applies to <b>${scopeText}</b>. Example: to move Wednesday's workout to Friday, Friday's to Monday and Monday's to Wednesday, set Friday = Wednesday, Monday = Friday, Wednesday = Monday. Each day must be used exactly once. Day names stay where they are.
+    </p>
+    ${rowsHtml}
+    <div id="rearr-status" style="font-size:12px; margin-top:8px;"></div>
+    <div class="modal-actions">
+      <button type="button" class="btn btn-outline" id="rearr-cancel">Cancel</button>
+      <button type="button" class="btn btn-primary" id="rearr-apply">Apply</button>
+    </div>
+  `);
+  m.querySelector('#rearr-cancel').addEventListener('click', closeProgramModal);
+  m.querySelector('#rearr-apply').addEventListener('click', async () => {
+    const mapping = {};
+    m.querySelectorAll('select[data-target]').forEach(s => { mapping[parseInt(s.dataset.target, 10)] = parseInt(s.value, 10); });
+    const used = new Set(Object.values(mapping));
+    const status = m.querySelector('#rearr-status');
+    if (used.size !== 7) {
+      status.textContent = 'Each day can only be used once - two days are getting the same workout.';
+      status.style.color = '#ff6b5c';
+      return;
+    }
+    closeProgramModal();
+    await structural(() => applyDayMapping(mapping, onlyRowOrder), 'Days rearranged');
+  });
+}

@@ -58,6 +58,7 @@ Every calendar, day header and logged value now belongs to a **program**. Use th
 - **Copy and Rename:** Copy makes a new program from the current calendar under a name you choose; Rename changes the current program's name.
 - **Default program:** click "Set as Default" (migration 6). The Calendar link always opens it, and so does a fresh visit. Archiving it clears the default.
 - **Save All:** on the Edit page, changes to any number of days are saved together with one Save All button (or Ctrl/Cmd+S).
+- **Move, duplicate, delete (Edit page):** each week has ▲ ▼ (move), ⧉ (duplicate), ⇄ (rearrange days in that week) and 🗑 (delete, two clicks). Each day has ◀ ▶ to swap with its neighbor, and "⇄ Days" in the top-left corner rearranges days in every week at once.
 - **Finish / Archive:** archiving hides a program but keeps every logged value and date. You can optionally start a fresh round with the same calendar (nothing marked done, no logged values). Archived programs can be restored or deleted (typed confirmation).
 - **Progress page:** each exercise in the current program next to the last time the same exercise (matched by name) was worked in an earlier program, with dates and the change in top weight.
 - **Calendar cells** are all the same height - the tallest cell sets the height for every cell.
